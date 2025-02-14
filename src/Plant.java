@@ -1,49 +1,147 @@
-public class Plant {
+public class Plant implements Runnable {
     // How long do we want to run the juice processing
     public static final long PROCESSING_TIME = 5 * 1000;
 
+    private static final int NUM_PLANTS = 2;
+
     public static void main(String[] args) {
-        // Startup a single plant
-        Plant p = new Plant();
+        // Startup the plants
+        Plant[] plants = new Plant[NUM_PLANTS];
+        for (int i = 0; i < NUM_PLANTS; i++) {
+            plants[i] = new Plant(i+1);
+            plants[i].startPlant();
+        }
 
         // Give the plants time to do work
-        long endTime = System.currentTimeMillis() + PROCESSING_TIME;
-        int provided = 0;
-        while (System.currentTimeMillis() < endTime) {
-            p.processEntireOrange(new Orange());
-            provided++;
+        delay(PROCESSING_TIME, "Plant malfunction");
+
+        // Stop the plant, and wait for it to shutdown
+        for (Plant p : plants) {
+            p.stopPlant();
+        }
+        for (Plant p : plants) {
+            p.waitToStop();
         }
 
         // Summarize the results
-        System.out.println("Total provided/processed = " + provided + "/" + p.getProcessedOranges());
-        System.out.println("Created " + p.getBottles() +
-                           ", wasted " + p.getWaste() + " oranges");
+        int totalProvided = 0;
+        int totalProcessed = 0;
+        int totalBottles = 0;
+        int totalWasted = 0;
+        for (Plant p : plants) {
+            totalProvided += p.getProvidedOranges();
+            totalProcessed += p.getProcessedOranges();
+            totalBottles += p.getBottles();
+            totalWasted += p.getWaste();
+        }
+        System.out.println("Total provided/processed = " + totalProvided + "/" + totalProcessed);
+        System.out.println("Created " + totalBottles +
+                           ", wasted " + totalWasted + " oranges");
     }
 
-    public final int ORANGES_PER_BOTTLE = 4;
+    /**
+     * Gives the plants time to do work by making this thread sleep for given time
+     * @param time Time to sleep for
+     * @param errMsg Error message to show if an error occurs
+     */
+    private static void delay(long time, String errMsg) {
+        long sleepTime = Math.max(1, time);
+        try {
+            Thread.sleep(sleepTime);
+        } catch (InterruptedException e) {
+            System.err.println(errMsg);
+        }
+    }
 
+    public final int ORANGES_PER_BOTTLE = 3;
+
+    private final Thread thread;
+    private int orangesProvided;
     private int orangesProcessed;
+    private volatile boolean timeToWork;
 
-    Plant() {
+    Plant(int threadNum) {
+        orangesProvided = 0;
         orangesProcessed = 0;
+        thread = new Thread(this, "Plant[" + threadNum + "]");
     }
 
+    /** Sets timeToWork to true, starts thread */
+    public void startPlant() {
+        timeToWork = true;
+        thread.start();
+    }
+
+    /** Sets timeToWork to false */
+    public void stopPlant() {
+        timeToWork = false;
+    }
+
+    /** Waits for thread to stop <br>
+     * From <a href="https://stackoverflow.com/questions/53405013/how-does-thread-join-work-conceptually">stack overflow</a> : <br>
+     * The classic implementation of Thread.join
+     * (other implementations are possible, is to lock
+     * the Thread object, test to see if is alive and
+     * if not wait on the Thread object. As a thread exits,
+     * it locks its instance and calls notifyAll.
+     * */
+    public void waitToStop() {
+        try {
+            thread.join();
+        } catch (InterruptedException e) {
+            System.err.println(thread.getName() + " stop malfunction");
+        }
+    }
+
+    /**
+     * Runs thread until it is no longer time to work. Continues
+     * to process oranges.
+     */
+    public void run() {
+        System.out.print(Thread.currentThread().getName() + " Processing oranges");
+        while (timeToWork) {
+            processEntireOrange(new Orange());
+            orangesProvided++;
+            System.out.print(".");
+        }
+        System.out.println("");
+        System.out.println(Thread.currentThread().getName() + " Done");
+    }
+
+    /**
+     * Processes an entire orange. Until the orange is bottled, this
+     * process will run.
+     * @param o Orange to process
+     */
     public void processEntireOrange(Orange o) {
         while (o.getState() != Orange.State.Bottled) {
             o.runProcess();
-            // o.nextState();
         }
         orangesProcessed++;
     }
 
+    /** Gets the number of oranges provided */
+    public int getProvidedOranges() {
+        return orangesProvided;
+    }
+
+    /** Gets the number of oranges processed */
     public int getProcessedOranges() {
         return orangesProcessed;
     }
 
+    /**
+     * Gets the number of bottles made
+     * @return the number of bottles made
+     */
     public int getBottles() {
         return orangesProcessed / ORANGES_PER_BOTTLE;
     }
 
+    /**
+     * Gets the waste (Leftover processed oranges(
+     * @return The number of wasted oranges
+     */
     public int getWaste() {
         return orangesProcessed % ORANGES_PER_BOTTLE;
     }
