@@ -146,7 +146,7 @@ public class Plant implements Runnable {
      * @param o Orange to process
      */
     public void peelOrange(Orange o) {
-        while (o.getState() != Orange.State.Squeezed) {
+        while (o.getState() != Orange.State.Peeled) {
             o.runProcess();
         }
         try{
