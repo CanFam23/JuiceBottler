@@ -11,19 +11,11 @@ public class Plant implements Runnable {
     private static final int NUM_WORKERS = 2;
 
     public static void main(String[] args) {
-        final BlockingQueue<Orange> orangesQueue = new LinkedBlockingQueue<>(10);
-
         // Startup the plants
         Plant[] plants = new Plant[NUM_PLANTS];
         for (int i = 0; i < NUM_PLANTS; i++) {
-            plants[i] = new Plant(i+1,orangesQueue);
+            plants[i] = new Plant(i+1);
             plants[i].startPlant();
-        }
-
-        Worker[] workers = new Worker[NUM_WORKERS];
-        for (int i = 0; i < NUM_WORKERS; i++) {
-            workers[i] = new Worker(i+1,orangesQueue);
-            workers[i].startWorker();
         }
 
         // Give the plants time to do work
@@ -34,16 +26,8 @@ public class Plant implements Runnable {
             p.stopPlant();
         }
 
-        for (Worker w : workers) {
-            w.stopWorker();
-        }
-
         for (Plant p : plants) {
             p.waitToStop();
-        }
-
-        for (Worker w : workers) {
-            w.waitToStop();
         }
 
         // Summarize the results
@@ -57,12 +41,6 @@ public class Plant implements Runnable {
 //            totalBottles += p.getBottles();
 //            totalWasted += p.getWaste();
 //        }
-        for (Worker w : workers) {
-            totalProvided += w.getProvidedOranges();
-            totalBottled += w.getProcessedOranges();
-            totalBottles += w.getBottles();
-            totalWasted += w.getWaste();
-        }
         System.out.println("Total provided/processed = " + totalProvided + "/" + totalBottled);
         System.out.println("Created " + totalBottles +
                            ", wasted " + totalWasted + " oranges");
@@ -91,22 +69,37 @@ public class Plant implements Runnable {
 
     private final BlockingQueue<Orange> orangesQueue;
 
-    Plant(int threadNum, BlockingQueue<Orange> orangesQueue) {
+    private final Worker[] workers;
+
+    Plant(int threadNum) {
         orangesPeeled = 0;
         orangesProvided = 0;
-        this.orangesQueue = orangesQueue;
+        orangesQueue = new LinkedBlockingQueue<>(10);
         thread = new Thread(this, "Plant[" + threadNum + "]");
+
+        workers = new Worker[NUM_WORKERS];
+        for (int i = 0; i < NUM_WORKERS; i++) {
+            workers[i] = new Worker(i+1,orangesQueue);
+        }
     }
 
     /** Sets timeToWork to true, starts thread */
     public void startPlant() {
         timeToWork = true;
         thread.start();
+
+        for (Worker w : workers) {
+            w.startWorker();
+        }
     }
 
     /** Sets timeToWork to false */
     public void stopPlant() {
         timeToWork = false;
+
+        for (Worker w : workers) {
+            w.stopWorker();
+        }
     }
 
     /** Waits for thread to stop <br>
@@ -118,6 +111,10 @@ public class Plant implements Runnable {
      * it locks its instance and calls notifyAll.
      * */
     public void waitToStop() {
+        for (Worker w : workers) {
+            w.waitToStop();
+        }
+
         try {
             thread.join();
         } catch (InterruptedException e) {
