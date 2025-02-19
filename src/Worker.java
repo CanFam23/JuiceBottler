@@ -6,25 +6,23 @@ public class Worker implements Runnable{
     private static final int ORANGES_PER_BOTTLE = 3;
 
     private final Thread thread;
-    private int orangesProvided;
     private int orangesProcessed;
     private volatile boolean timeToWork;
 
     private final BlockingQueue<Orange> orangesQueue;
 
     public Worker(int threadNum,BlockingQueue<Orange> orangesQueue){
-        orangesProvided = 0;
         orangesProcessed = 0;
         this.orangesQueue = orangesQueue;
         this.thread = new Thread(this,"Worker["+threadNum+"]");
     }
 
-    public void startWorker(){
+    public void start(){
         timeToWork = true;
         thread.start();
     }
 
-    public void stopWorker(){
+    public void stop(){
         timeToWork = false;
     }
 
@@ -40,7 +38,6 @@ public class Worker implements Runnable{
              Orange o = orangesQueue.poll(100, TimeUnit.MILLISECONDS);
              if(o != null){
                  bottleOrange(o);
-                 orangesProvided++;
              }
          } catch(InterruptedException e){
              System.out.println(Thread.currentThread().getName()+" interrupted when waiting to get orange from queue.");
@@ -64,11 +61,6 @@ public class Worker implements Runnable{
         } catch (InterruptedException e) {
             System.err.println(thread.getName() + " stop malfunction");
         }
-    }
-
-    /** Gets the number of oranges provided */
-    public int getProvidedOranges() {
-        return orangesProvided;
     }
 
     /** Gets the number of oranges processed */

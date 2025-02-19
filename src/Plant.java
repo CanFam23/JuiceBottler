@@ -33,16 +33,16 @@ public class Plant implements Runnable {
         // Summarize the results
         int totalProvided = 0;
         int totalBottled = 0;
-        int totalBottles = 0;
+        int totalProcessed = 0;
         int totalWasted = 0;
-//        for (Plant p : plants) {
-//            totalProvided += p.getProvidedOranges();
-//            totalProcessed += p.getProcessedOranges();
-//            totalBottles += p.getBottles();
-//            totalWasted += p.getWaste();
-//        }
-        System.out.println("Total provided/processed = " + totalProvided + "/" + totalBottled);
-        System.out.println("Created " + totalBottles +
+        for (Plant p : plants) {
+            totalProvided += p.getOrangesProvided();
+            totalProcessed += p.getOrangesProcessed();
+            totalBottled += p.getOrangesBottled();
+            totalWasted += p.getOrangesWasted();
+        }
+        System.out.println("Total provided/processed = " + totalProvided + "/" + totalProcessed);
+        System.out.println("Created " + totalBottled +
                            ", wasted " + totalWasted + " oranges");
     }
 
@@ -89,7 +89,7 @@ public class Plant implements Runnable {
         thread.start();
 
         for (Worker w : workers) {
-            w.startWorker();
+            w.start();
         }
     }
 
@@ -98,7 +98,7 @@ public class Plant implements Runnable {
         timeToWork = false;
 
         for (Worker w : workers) {
-            w.stopWorker();
+            w.stop();
         }
     }
 
@@ -163,5 +163,29 @@ public class Plant implements Runnable {
 
     public int getOrangesProvided() {
         return orangesProvided;
+    }
+
+    public int getOrangesBottled(){
+        int orangesBottled = 0;
+        for (Worker w : workers) {
+            orangesBottled += w.getBottles();
+        }
+        return orangesBottled;
+    }
+
+    public int getOrangesProcessed(){
+        int orangesProcessed = 0;
+        for (Worker w : workers) {
+            orangesProcessed += w.getProcessedOranges();
+        }
+        return orangesProcessed;
+    }
+
+    public int getOrangesWasted(){
+        int orangesWasted = 0;
+        for (Worker w : workers) {
+            orangesWasted += w.getWaste();
+        }
+        return orangesWasted;
     }
 }
