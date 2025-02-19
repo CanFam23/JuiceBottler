@@ -33,13 +33,15 @@ public class Plant implements Runnable {
         for (Plant p : plants) {
             p.stopPlant();
         }
-        for (Plant p : plants) {
-            p.waitToStop();
-        }
 
         for (Worker w : workers) {
             w.stopWorker();
         }
+
+        for (Plant p : plants) {
+            p.waitToStop();
+        }
+
         for (Worker w : workers) {
             w.waitToStop();
         }
