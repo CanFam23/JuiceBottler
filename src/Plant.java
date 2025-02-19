@@ -1,15 +1,29 @@
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
+
 public class Plant implements Runnable {
     // How long do we want to run the juice processing
     public static final long PROCESSING_TIME = 5 * 1000;
 
     private static final int NUM_PLANTS = 2;
 
+    private static final int NUM_WORKERS = 2;
+
     public static void main(String[] args) {
+        final BlockingQueue<Orange> orangesQueue = new LinkedBlockingQueue<>(10);
+
         // Startup the plants
         Plant[] plants = new Plant[NUM_PLANTS];
         for (int i = 0; i < NUM_PLANTS; i++) {
-            plants[i] = new Plant(i+1);
+            plants[i] = new Plant(i+1,orangesQueue);
             plants[i].startPlant();
+        }
+
+        Worker[] workers = new Worker[NUM_WORKERS];
+        for (int i = 0; i < NUM_WORKERS; i++) {
+            workers[i] = new Worker(i+1,orangesQueue);
+            workers[i].startWorker();
         }
 
         // Give the plants time to do work
@@ -23,24 +37,37 @@ public class Plant implements Runnable {
             p.waitToStop();
         }
 
+        for (Worker w : workers) {
+            w.stopWorker();
+        }
+        for (Worker w : workers) {
+            w.waitToStop();
+        }
+
         // Summarize the results
         int totalProvided = 0;
-        int totalProcessed = 0;
+        int totalBottled = 0;
         int totalBottles = 0;
         int totalWasted = 0;
-        for (Plant p : plants) {
-            totalProvided += p.getProvidedOranges();
-            totalProcessed += p.getProcessedOranges();
-            totalBottles += p.getBottles();
-            totalWasted += p.getWaste();
+//        for (Plant p : plants) {
+//            totalProvided += p.getProvidedOranges();
+//            totalProcessed += p.getProcessedOranges();
+//            totalBottles += p.getBottles();
+//            totalWasted += p.getWaste();
+//        }
+        for (Worker w : workers) {
+            totalProvided += w.getProvidedOranges();
+            totalBottled += w.getProcessedOranges();
+            totalBottles += w.getBottles();
+            totalWasted += w.getWaste();
         }
-        System.out.println("Total provided/processed = " + totalProvided + "/" + totalProcessed);
+        System.out.println("Total provided/processed = " + totalProvided + "/" + totalBottled);
         System.out.println("Created " + totalBottles +
                            ", wasted " + totalWasted + " oranges");
     }
 
     /**
-     * Gives the plants time to do work by making this thread sleep for given time
+     * Gives the other plants time to do work by making this thread sleep for given time
      * @param time Time to sleep for
      * @param errMsg Error message to show if an error occurs
      */
@@ -56,13 +83,16 @@ public class Plant implements Runnable {
     public final int ORANGES_PER_BOTTLE = 3;
 
     private final Thread thread;
+    private int orangesPeeled;
     private int orangesProvided;
-    private int orangesProcessed;
     private volatile boolean timeToWork;
 
-    Plant(int threadNum) {
+    private final BlockingQueue<Orange> orangesQueue;
+
+    Plant(int threadNum, BlockingQueue<Orange> orangesQueue) {
+        orangesPeeled = 0;
         orangesProvided = 0;
-        orangesProcessed = 0;
+        this.orangesQueue = orangesQueue;
         thread = new Thread(this, "Plant[" + threadNum + "]");
     }
 
@@ -98,9 +128,9 @@ public class Plant implements Runnable {
      * to process oranges.
      */
     public void run() {
-        System.out.print(Thread.currentThread().getName() + " Processing oranges");
+        System.out.println(Thread.currentThread().getName() + " Processing oranges");
         while (timeToWork) {
-            processEntireOrange(new Orange());
+            peelOrange(new Orange());
             orangesProvided++;
             System.out.print(".");
         }
@@ -113,36 +143,26 @@ public class Plant implements Runnable {
      * process will run.
      * @param o Orange to process
      */
-    public void processEntireOrange(Orange o) {
-        while (o.getState() != Orange.State.Bottled) {
+    public void peelOrange(Orange o) {
+        while (o.getState() != Orange.State.Squeezed) {
             o.runProcess();
         }
-        orangesProcessed++;
+        try{
+            final boolean orangeAdded = orangesQueue.offer(o,100, TimeUnit.MILLISECONDS);
+            if(!orangeAdded) {
+                System.out.println(Thread.currentThread().getName() + " couldn't add an orange because the queue is full.");
+            }
+        }catch(InterruptedException e){
+            System.out.println(Thread.currentThread().getName() + " stop malfunction while attempting to add orange to queue");
+        }
+        orangesPeeled++;
     }
 
-    /** Gets the number of oranges provided */
-    public int getProvidedOranges() {
+    public int getOrangesPeeled() {
+        return orangesPeeled;
+    }
+
+    public int getOrangesProvided() {
         return orangesProvided;
-    }
-
-    /** Gets the number of oranges processed */
-    public int getProcessedOranges() {
-        return orangesProcessed;
-    }
-
-    /**
-     * Gets the number of bottles made
-     * @return the number of bottles made
-     */
-    public int getBottles() {
-        return orangesProcessed / ORANGES_PER_BOTTLE;
-    }
-
-    /**
-     * Gets the waste (Leftover processed oranges(
-     * @return The number of wasted oranges
-     */
-    public int getWaste() {
-        return orangesProcessed % ORANGES_PER_BOTTLE;
     }
 }
