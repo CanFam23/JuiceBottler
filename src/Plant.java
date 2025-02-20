@@ -63,6 +63,7 @@ public class Plant implements Runnable {
         int totalWasted = 0;
         int totalLeftInQueue = 0;
         int totalNotBottled = 0;
+        int totalRemoved = 0;
         for (Plant p : plants) {
             totalProvided += p.getOrangesProvided();
             totalProcessed += p.getOrangesProcessed();
@@ -70,10 +71,12 @@ public class Plant implements Runnable {
             totalWasted += p.getOrangesWasted();
             totalLeftInQueue += p.getOrangesLeftInQueue();
             totalNotBottled += p.getOrangesNotBottled();
+            totalRemoved += p.getOrangesRemovedFromQueues();
         }
         System.out.println("Total provided/processed = " + totalProvided + "/" + totalProcessed);
         System.out.println("Total left in queues = " + totalLeftInQueue);
         System.out.println("Total leftover after bottling oranges = " + totalNotBottled);
+        System.out.println("Total removed from queues = " + totalRemoved);
         System.out.println("Created " + totalBottled +
                            ", wasted " + totalWasted + " oranges");
     }
@@ -97,6 +100,9 @@ public class Plant implements Runnable {
 
     /** Keeps track of oranges provided to the workers. */
     private int orangesProvided;
+
+    /** Keeps track of how many oranges were removed from queues because they were put in the wrong one. */
+    private int orangesRemovedFromQueues;
 
     /** If true, then plant should be working. */
     private volatile boolean timeToWork;
@@ -131,11 +137,12 @@ public class Plant implements Runnable {
         workers = new Worker[TOTAL_WORKERS];
 
         orangesProvided = 0;
+        orangesRemovedFromQueues = 0;
 
         // Create given amount of each worker and add them to the workers array
         int ind = 0;
         for (int i = 0; i < NUM_PEELERS; i++) {
-            workers[ind] = new Worker(threadNum,+1,peelQueue,squeezeQueue,Orange.State.Peeled);
+            workers[ind] = new Worker(threadNum,ind+1,peelQueue,squeezeQueue,Orange.State.Peeled);
             ind++;
         }
 
@@ -199,10 +206,53 @@ public class Plant implements Runnable {
         while (timeToWork) {
             distributeOrange(new Orange());
             orangesProvided++;
-            System.out.print(".");
+            checkQueues();
         }
         System.out.println(" ");
         System.out.println(Thread.currentThread().getName() + " Done");
+    }
+
+    /**
+     * The Line Inspector, removes oranges from each queue if they are not in the correct {@link Orange.State}.
+     * <ul>
+     *     <li>Removes oranges from {@link #peelQueue} who's state isn't fetched.</li>
+     *     <li>Removes oranges from {@link #squeezeQueue} who's state isn't peeled.</li>
+     *     <li>Removes oranges from {@link #bottleQueue} who's state isn't squeezed.</li>
+     *     <li>Removes oranges from {@link #doneQueue} who's state isn't bottled.</li>
+     * </ul>
+     */
+    public void checkQueues(){
+        // Remove oranges from peel queue if state isn't fetched
+        final int peelQueueSize = peelQueue.size();
+        boolean removedFromQueue = peelQueue.removeIf(orange -> orange.getState() != Orange.State.Fetched);
+        if (removedFromQueue) {
+            System.err.println("Removed " + (peelQueueSize - peelQueue.size()) + " orange(s) from peel queue with incorrect state(s).");
+            orangesRemovedFromQueues += (peelQueueSize - peelQueue.size());
+        }
+
+        // Remove oranges from squeeze queue if state isn't peeled
+        final int squeezeQueueSize = squeezeQueue.size();
+        removedFromQueue = squeezeQueue.removeIf(orange -> orange.getState() != Orange.State.Peeled);
+        if (removedFromQueue) {
+            System.err.println("Removed " + (squeezeQueueSize - squeezeQueue.size()) + " orange(s) from squeeze queue with incorrect state(s).");
+            orangesRemovedFromQueues += (squeezeQueueSize - squeezeQueue.size());
+        }
+
+        // Remove oranges from bottle queue if state isn't squeezed
+        final int bottleQueueSize = bottleQueue.size();
+        removedFromQueue = bottleQueue.removeIf(orange -> orange.getState() != Orange.State.Squeezed);
+        if (removedFromQueue) {
+            System.err.println("Removed " + (bottleQueueSize - bottleQueue.size()) + " orange(s) from bottle queue with incorrect state(s).");
+            orangesRemovedFromQueues += (bottleQueueSize - bottleQueue.size());
+        }
+
+        // Remove oranges from done queue if state isn't bottled
+        final int qSize = doneQueue.size();
+        final boolean removedFromDoneQ = doneQueue.removeIf(orange -> orange.getState() != Orange.State.Bottled);
+        if (removedFromDoneQ) {
+            orangesRemovedFromQueues += doneQueue.size() - qSize;
+            System.err.println("Removed Oranges from doneQueue that didn't have state of bottled.");
+        }
     }
 
     /**
@@ -211,6 +261,9 @@ public class Plant implements Runnable {
      */
     public void distributeOrange(Orange o) {
         try{
+            if(o.getState() != Orange.State.Fetched){
+                System.err.println("Time to peel!");
+            }
             // Add orange to queue if it's not full, else wait 100 milliseconds to see if a space is freed
             final boolean orangeAdded = peelQueue.offer(o,MAX_TIMEOUT_TIME_MILLIS, TimeUnit.MILLISECONDS);
             if(!orangeAdded) {
@@ -260,7 +313,7 @@ public class Plant implements Runnable {
      * @return The number of oranges wasted.
      */
     public int getOrangesWasted(){
-        return doneQueue.size() % ORANGES_PER_BOTTLE + getOrangesLeftInQueue();
+        return doneQueue.size() % ORANGES_PER_BOTTLE + getOrangesLeftInQueue() + getOrangesRemovedFromQueues();
     }
 
     /**
@@ -269,5 +322,13 @@ public class Plant implements Runnable {
      */
     public int getOrangesLeftInQueue(){
         return peelQueue.size() + squeezeQueue.size() + bottleQueue.size();
+    }
+
+    /**
+     * Gets how many oranges were removed from queues because they were in the wrong one.
+     * @return How many oranges were removed from queues because they were in the wrong one.
+     */
+    public int getOrangesRemovedFromQueues(){
+        return orangesRemovedFromQueues;
     }
 }
