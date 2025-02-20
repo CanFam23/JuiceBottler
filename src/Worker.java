@@ -4,7 +4,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * The worker class is meant to be spawning from the {@link Plant} class. A worker will have a {@link #job}, which
  * represents when to stop doing work on an {@link Orange}. The worker will get oranges to do work on from the {@link #takeQueue},
- * and then add the oranges to the {@link #giveQueue} when the worker is done doing it's job on it. 
+ * and then add the oranges to the {@link #giveQueue} when the worker is done doing it's job on it.
  */
 public class Worker implements Runnable{
     /** Max amount of time a worker will wait to get/add an orange from/to a queue. */
@@ -27,15 +27,16 @@ public class Worker implements Runnable{
 
     /**
      * Creates a new Worker object.
+     * @param plantNum Number of plant this worker is working in, used to name worker thread.
      * @param threadNum Number of thread/worker.
      * @param takeQueue Queue to take oranges from.
      * @param giveQueue Queue to add oranges to after the workers job is complete
      * @param job The worker will process a orange until it's {@link Orange.State} equals job.
      */
-    public Worker(int threadNum, BlockingQueue<Orange> takeQueue,BlockingQueue<Orange> giveQueue, Orange.State job){
+    public Worker(int plantNum, int threadNum, BlockingQueue<Orange> takeQueue,BlockingQueue<Orange> giveQueue, Orange.State job){
         this.takeQueue = takeQueue;
         this.giveQueue = giveQueue;
-        this.thread = new Thread(this,"Worker["+threadNum+"]");
+        this.thread = new Thread(this,"Worker[" + plantNum + "." +threadNum+"]");
         this.job = job;
     }
 

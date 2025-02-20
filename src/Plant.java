@@ -135,17 +135,17 @@ public class Plant implements Runnable {
         // Create given amount of each worker and add them to the workers array
         int ind = 0;
         for (int i = 0; i < NUM_PEELERS; i++) {
-            workers[ind] = new Worker(ind+1,peelQueue,squeezeQueue,Orange.State.Peeled);
+            workers[ind] = new Worker(threadNum,+1,peelQueue,squeezeQueue,Orange.State.Peeled);
             ind++;
         }
 
         for (int i = 0; i < NUM_SQUEEZERS; i++) {
-            workers[ind] = new Worker(ind+1,squeezeQueue,bottleQueue,Orange.State.Squeezed);
+            workers[ind] = new Worker(threadNum,ind+1,squeezeQueue,bottleQueue,Orange.State.Squeezed);
             ind++;
         }
 
         for (int i = 0; i < NUM_BOTTLERS; i++) {
-            workers[ind] = new Worker(ind+1,bottleQueue,doneQueue,Orange.State.Bottled);
+            workers[ind] = new Worker(threadNum,ind+1,bottleQueue,doneQueue,Orange.State.Bottled);
             ind++;
         }
     }
