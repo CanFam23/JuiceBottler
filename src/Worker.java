@@ -6,15 +6,18 @@ public class Worker implements Runnable{
     private static final int ORANGES_PER_BOTTLE = 3;
 
     private final Thread thread;
-    private int orangesProcessed;
     private volatile boolean timeToWork;
 
-    private final BlockingQueue<Orange> orangesQueue;
+    private final BlockingQueue<Orange> takeQueue;
+    private final BlockingQueue<Orange> giveQueue;
 
-    public Worker(int threadNum,BlockingQueue<Orange> orangesQueue){
-        orangesProcessed = 0;
-        this.orangesQueue = orangesQueue;
+    private Orange.State job;
+
+    public Worker(int threadNum, BlockingQueue<Orange> takeQueue,BlockingQueue<Orange> giveQueue, Orange.State job){
+        this.takeQueue = takeQueue;
+        this.giveQueue = giveQueue;
         this.thread = new Thread(this,"Worker["+threadNum+"]");
+        this.job = job;
     }
 
     public void start(){
@@ -35,9 +38,10 @@ public class Worker implements Runnable{
      while(timeToWork){
          try{
 //             Orange o = orangesQueue.take();
-             Orange o = orangesQueue.poll(100, TimeUnit.MILLISECONDS);
+             Orange o = takeQueue.poll(100, TimeUnit.MILLISECONDS);
              if(o != null){
                  bottleOrange(o);
+                 giveQueue.offer(o,100,TimeUnit.MILLISECONDS);
              }
          } catch(InterruptedException e){
              System.out.println(Thread.currentThread().getName()+" interrupted when waiting to get orange from queue.");
@@ -48,11 +52,10 @@ public class Worker implements Runnable{
     }
 
     public void bottleOrange(Orange o){
-        while (o.getState() != Orange.State.Bottled) {
+        while (o.getState() != job) {
             o.runProcess();
         }
 //        System.out.println("Orange bottled, queue size is now: " + orangesQueue.size());
-        orangesProcessed++;
     }
 
     public void waitToStop() {
@@ -61,26 +64,5 @@ public class Worker implements Runnable{
         } catch (InterruptedException e) {
             System.err.println(thread.getName() + " stop malfunction");
         }
-    }
-
-    /** Gets the number of oranges processed */
-    public int getProcessedOranges() {
-        return orangesProcessed;
-    }
-
-    /**
-     * Gets the number of bottles made
-     * @return the number of bottles made
-     */
-    public int getBottles() {
-        return getProcessedOranges() / ORANGES_PER_BOTTLE;
-    }
-
-    /**
-     * Gets the waste (Leftover processed oranges(
-     * @return The number of wasted oranges
-     */
-    public int getWaste() {
-        return getProcessedOranges() % ORANGES_PER_BOTTLE;
     }
 }

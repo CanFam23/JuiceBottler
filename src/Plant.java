@@ -8,7 +8,7 @@ public class Plant implements Runnable {
 
     private static final int NUM_PLANTS = 2;
 
-    private static final int NUM_WORKERS = 2;
+    private static final int NUM_WORKERS = 10;
 
     public static void main(String[] args) {
         // Startup the plants
@@ -35,13 +35,19 @@ public class Plant implements Runnable {
         int totalBottled = 0;
         int totalProcessed = 0;
         int totalWasted = 0;
+        int totalLeftInQueue = 0;
+        int totalNotBottled = 0;
         for (Plant p : plants) {
             totalProvided += p.getOrangesProvided();
             totalProcessed += p.getOrangesProcessed();
             totalBottled += p.getOrangesBottled();
             totalWasted += p.getOrangesWasted();
+            totalLeftInQueue += p.getOrangesLeftInQueue();
+            totalNotBottled += p.getOrangesNotBottled();
         }
         System.out.println("Total provided/processed = " + totalProvided + "/" + totalProcessed);
+        System.out.println("Total left in queues = " + totalLeftInQueue);
+        System.out.println("Total leftover after bottling oranges = " + totalNotBottled);
         System.out.println("Created " + totalBottled +
                            ", wasted " + totalWasted + " oranges");
     }
@@ -63,23 +69,37 @@ public class Plant implements Runnable {
     public final int ORANGES_PER_BOTTLE = 3;
 
     private final Thread thread;
-    private int orangesPeeled;
     private int orangesProvided;
     private volatile boolean timeToWork;
 
-    private final BlockingQueue<Orange> orangesQueue;
+    private final BlockingQueue<Orange> peelQueue;
+    private final BlockingQueue<Orange> squeezeQueue;
+    private final BlockingQueue<Orange> bottleQueue;
+    private final BlockingQueue<Orange> doneQueue;
+
 
     private final Worker[] workers;
 
     Plant(int threadNum) {
-        orangesPeeled = 0;
         orangesProvided = 0;
-        orangesQueue = new LinkedBlockingQueue<>(10);
+        peelQueue = new LinkedBlockingQueue<>(10);
+        squeezeQueue = new LinkedBlockingQueue<>(10);
+        bottleQueue = new LinkedBlockingQueue<>(10);
+        doneQueue = new LinkedBlockingQueue<>();
         thread = new Thread(this, "Plant[" + threadNum + "]");
 
         workers = new Worker[NUM_WORKERS];
         for (int i = 0; i < NUM_WORKERS; i++) {
-            workers[i] = new Worker(i+1,orangesQueue);
+            // Want 1 plant bottling
+            if (i < 6){
+                workers[i] = new Worker(i+1,peelQueue,squeezeQueue,Orange.State.Bottled);
+            } else if (i < 9){
+                // Want 1 plant bottling
+                workers[i] = new Worker(i+1,squeezeQueue,bottleQueue,Orange.State.Bottled);
+            } else {
+                // Want 2 workers bottling
+                workers[i] = new Worker(i+1,bottleQueue,doneQueue,Orange.State.Bottled);
+            }
         }
     }
 
@@ -131,9 +151,7 @@ public class Plant implements Runnable {
         while (timeToWork) {
             peelOrange(new Orange());
             orangesProvided++;
-            System.out.print(".");
         }
-        System.out.println("");
         System.out.println(Thread.currentThread().getName() + " Done");
     }
 
@@ -143,22 +161,14 @@ public class Plant implements Runnable {
      * @param o Orange to process
      */
     public void peelOrange(Orange o) {
-        while (o.getState() != Orange.State.Peeled) {
-            o.runProcess();
-        }
         try{
-            final boolean orangeAdded = orangesQueue.offer(o,100, TimeUnit.MILLISECONDS);
+            final boolean orangeAdded = peelQueue.offer(o,100, TimeUnit.MILLISECONDS);
             if(!orangeAdded) {
                 System.out.println(Thread.currentThread().getName() + " couldn't add an orange because the queue is full.");
             }
         }catch(InterruptedException e){
             System.out.println(Thread.currentThread().getName() + " stop malfunction while attempting to add orange to queue");
         }
-        orangesPeeled++;
-    }
-
-    public int getOrangesPeeled() {
-        return orangesPeeled;
     }
 
     public int getOrangesProvided() {
@@ -166,26 +176,22 @@ public class Plant implements Runnable {
     }
 
     public int getOrangesBottled(){
-        int orangesBottled = 0;
-        for (Worker w : workers) {
-            orangesBottled += w.getBottles();
-        }
-        return orangesBottled;
+        return doneQueue.size() / ORANGES_PER_BOTTLE;
     }
 
     public int getOrangesProcessed(){
-        int orangesProcessed = 0;
-        for (Worker w : workers) {
-            orangesProcessed += w.getProcessedOranges();
-        }
-        return orangesProcessed;
+        return doneQueue.size();
+    }
+
+    public int getOrangesNotBottled() {
+        return doneQueue.size() % ORANGES_PER_BOTTLE;
     }
 
     public int getOrangesWasted(){
-        int orangesWasted = 0;
-        for (Worker w : workers) {
-            orangesWasted += w.getWaste();
-        }
-        return orangesWasted;
+        return doneQueue.size() % ORANGES_PER_BOTTLE + getOrangesLeftInQueue();
+    }
+
+    public int getOrangesLeftInQueue(){
+        return peelQueue.size() + squeezeQueue.size() + bottleQueue.size();
     }
 }
