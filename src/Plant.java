@@ -8,7 +8,12 @@ public class Plant implements Runnable {
 
     private static final int NUM_PLANTS = 2;
 
-    private static final int NUM_WORKERS = 10;
+    private static final int NUM_PEELERS = 6;
+    private static final int NUM_SQUEEZERS = 4;
+    private static final int NUM_BOTTLERS = 3;
+    private static final int TOTAL_WORKERS = NUM_PEELERS + NUM_SQUEEZERS + NUM_BOTTLERS;
+
+
 
     public static void main(String[] args) {
         // Startup the plants
@@ -88,18 +93,22 @@ public class Plant implements Runnable {
         doneQueue = new LinkedBlockingQueue<>();
         thread = new Thread(this, "Plant[" + threadNum + "]");
 
-        workers = new Worker[NUM_WORKERS];
-        for (int i = 0; i < NUM_WORKERS; i++) {
-            // Want 1 plant bottling
-            if (i < 6){
-                workers[i] = new Worker(i+1,peelQueue,squeezeQueue,Orange.State.Bottled);
-            } else if (i < 9){
-                // Want 1 plant bottling
-                workers[i] = new Worker(i+1,squeezeQueue,bottleQueue,Orange.State.Bottled);
-            } else {
-                // Want 2 workers bottling
-                workers[i] = new Worker(i+1,bottleQueue,doneQueue,Orange.State.Bottled);
-            }
+        workers = new Worker[TOTAL_WORKERS];
+
+        int ind = 0;
+        for (int i = 0; i < NUM_PEELERS; i++) {
+            workers[ind] = new Worker(ind+1,peelQueue,squeezeQueue,Orange.State.Peeled);
+            ind++;
+        }
+
+        for (int i = 0; i < NUM_SQUEEZERS; i++) {
+            workers[ind] = new Worker(ind+1,squeezeQueue,bottleQueue,Orange.State.Squeezed);
+            ind++;
+        }
+
+        for (int i = 0; i < NUM_BOTTLERS; i++) {
+            workers[ind] = new Worker(ind+1,bottleQueue,doneQueue,Orange.State.Bottled);
+            ind++;
         }
     }
 
