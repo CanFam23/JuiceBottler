@@ -12,10 +12,10 @@ import java.util.concurrent.TimeUnit;
  */
 public class Plant implements Runnable {
     /** How long do we want to run the juice processing. */
-    public static final long PROCESSING_TIME = 5 * 1000;
+    private static final long PROCESSING_TIME = 5 * 1000;
 
     /** Number of oranges put in each bottle. */
-    public static final int ORANGES_PER_BOTTLE = 3;
+    private static final int ORANGES_PER_BOTTLE = 3;
 
     /** Number of plants that will be running. */
     private static final int NUM_PLANTS = 2;
@@ -129,7 +129,7 @@ public class Plant implements Runnable {
      * Creates a new Plant object.
      * @param threadNum Number of this thread
      */
-    Plant(int threadNum) {
+    public Plant(int threadNum) {
         peelQueue = new LinkedBlockingQueue<>(10);
         squeezeQueue = new LinkedBlockingQueue<>(10);
         bottleQueue = new LinkedBlockingQueue<>(10);
