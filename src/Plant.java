@@ -3,7 +3,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 /**
- * The Plant class represents a processing plant in which workers bottle oranges. Using several threads and different queues,
+ * The {@code Plant} class represents a processing plant in which workers bottle oranges. Using several threads and different queues,
  * the plant has different {@link Worker} objects who do one of three tasks:
  * <br> 1. Peel oranges <br>
  * 2. Squeeze oranges <br>

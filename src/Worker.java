@@ -2,9 +2,9 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 /**
- * The worker class is meant to be spawning from the {@link Plant} class. A worker will have a {@link #job}, which
+ * The {@code Worker} class is meant to be spawned from the {@link Plant} class. A worker will have a {@link #job}, which
  * represents when to stop doing work on an {@link Orange}. The worker will get oranges to do work on from the {@link #takeQueue},
- * and then add the oranges to the {@link #giveQueue} when the worker is done doing it's job on it.
+ * and then add the oranges to the {@link #giveQueue} when the worker is done doing its job on it.
  */
 public class Worker implements Runnable{
     /** Max amount of time a worker will wait to get/add an orange from/to a queue. */
@@ -13,7 +13,7 @@ public class Worker implements Runnable{
     /** Thread for the worker. */
     private final Thread thread;
 
-    /** When true, the worker shoould do work. */
+    /** When true, the worker should do work. */
     private volatile boolean timeToWork;
 
     /** Queue to get oranges from to process them. */
@@ -31,7 +31,7 @@ public class Worker implements Runnable{
      * @param threadNum Number of thread/worker.
      * @param takeQueue Queue to take oranges from.
      * @param giveQueue Queue to add oranges to after the workers job is complete
-     * @param job The worker will process a orange until it's {@link Orange.State} equals job.
+     * @param job The worker will process an orange until it's {@link Orange.State} equals job.
      */
     public Worker(int plantNum, int threadNum, BlockingQueue<Orange> takeQueue,BlockingQueue<Orange> giveQueue, Orange.State job){
         this.takeQueue = takeQueue;
