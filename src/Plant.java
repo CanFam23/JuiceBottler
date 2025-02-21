@@ -35,7 +35,10 @@ public class Plant implements Runnable {
     /** Max amount of time a plant will wait to add orange to a queue. */
     private static final int MAX_TIMEOUT_TIME_MILLIS = 100;
 
-    /** Main method, creates plants and starts them, the gives them time to work before stopping them and gathering data. */
+    /**
+     * Main method, creates plants and starts them, the gives them time to work before stopping them and gathering data.
+     * @param args arguments provided.
+     */
     public static void main(String[] args) {
         // Startup the plants
         final Plant[] plants = new Plant[NUM_PLANTS];

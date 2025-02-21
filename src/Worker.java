@@ -81,7 +81,10 @@ public class Worker implements Runnable{
      System.out.println(Thread.currentThread().getName()+" has finished working.");
     }
 
-    /** Runs {@link Orange#runProcess()} on given orange until this thread has done it's {@link #job}. */
+    /**
+     * Runs {@link Orange#runProcess()} on given orange until this thread has done it's {@link #job}.
+     * @param o Orange to run process on.
+     */
     public void processOrange(Orange o){
         while (o.getState() != job) {
             o.runProcess();
