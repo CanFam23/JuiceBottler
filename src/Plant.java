@@ -37,13 +37,14 @@ public class Plant implements Runnable {
 
     /**
      * Main method, creates plants and starts them, the gives them time to work before stopping them and gathering data.
+     *
      * @param args arguments provided.
      */
     public static void main(String[] args) {
         // Startup the plants
         final Plant[] plants = new Plant[NUM_PLANTS];
         for (int i = 0; i < NUM_PLANTS; i++) {
-            plants[i] = new Plant(i+1);
+            plants[i] = new Plant(i + 1);
             plants[i].startPlant();
         }
 
@@ -81,12 +82,13 @@ public class Plant implements Runnable {
         System.out.println("Total leftover after bottling oranges = " + totalNotBottled);
         System.out.println("Total removed from queues = " + totalRemoved);
         System.out.println("Created " + totalBottled +
-                           ", wasted " + totalWasted + " oranges");
+                ", wasted " + totalWasted + " oranges");
     }
 
     /**
      * Gives the other plants time to do work by making this thread sleep for given time
-     * @param time Time to sleep for
+     *
+     * @param time   Time to sleep for
      * @param errMsg Error message to show if an error occurs
      */
     private static void delay(long time, String errMsg) {
@@ -127,6 +129,7 @@ public class Plant implements Runnable {
 
     /**
      * Creates a new Plant object.
+     *
      * @param threadNum Number of this thread
      */
     public Plant(int threadNum) {
@@ -145,17 +148,17 @@ public class Plant implements Runnable {
         // Create given amount of each worker and add them to the workers array
         int ind = 0;
         for (int i = 0; i < NUM_PEELERS; i++) {
-            workers[ind] = new Worker(threadNum,ind+1,peelQueue,squeezeQueue,Orange.State.Peeled);
+            workers[ind] = new Worker(threadNum, ind + 1, peelQueue, squeezeQueue, Orange.State.Peeled);
             ind++;
         }
 
         for (int i = 0; i < NUM_SQUEEZERS; i++) {
-            workers[ind] = new Worker(threadNum,ind+1,squeezeQueue,bottleQueue,Orange.State.Squeezed);
+            workers[ind] = new Worker(threadNum, ind + 1, squeezeQueue, bottleQueue, Orange.State.Squeezed);
             ind++;
         }
 
         for (int i = 0; i < NUM_BOTTLERS; i++) {
-            workers[ind] = new Worker(threadNum,ind+1,bottleQueue,doneQueue,Orange.State.Bottled);
+            workers[ind] = new Worker(threadNum, ind + 1, bottleQueue, doneQueue, Orange.State.Bottled);
             ind++;
         }
     }
@@ -181,13 +184,14 @@ public class Plant implements Runnable {
         }
     }
 
-    /** Waits for thread to stop. Calls waitToStop on each worker before waiting to stop itself. <br>
+    /**
+     * Waits for thread to stop. Calls waitToStop on each worker before waiting to stop itself. <br>
      * From <a href="https://stackoverflow.com/questions/53405013/how-does-thread-join-work-conceptually">stack overflow</a> : <br>
      * The classic implementation of Thread.join is to lock
      * the Thread object, test to see if is alive and
      * if not wait on the Thread object. As a thread exits,
      * it locks its instance and calls notifyAll.
-     * */
+     */
     public void waitToStop() {
         for (Worker w : workers) {
             w.waitToStop();
@@ -224,7 +228,7 @@ public class Plant implements Runnable {
      *     <li>Removes oranges from {@link #doneQueue} who's state isn't bottled.</li>
      * </ul>
      */
-    public void checkQueues(){
+    public void checkQueues() {
         // Remove oranges from peel queue if state isn't fetched
         final int peelQueueSize = peelQueue.size();
         boolean removedFromQueue = peelQueue.removeIf(orange -> orange.getState() != Orange.State.Fetched);
@@ -260,50 +264,56 @@ public class Plant implements Runnable {
 
     /**
      * Offers an orange to the peelQueue, if full, it will wait 100 milliseconds to add one.
+     *
      * @param o Orange to process
      */
     public void distributeOrange(Orange o) {
-        try{
-            if(o.getState() != Orange.State.Fetched){
+        try {
+            if (o.getState() != Orange.State.Fetched) {
                 System.err.println("Time to peel!");
             }
             // Add orange to queue if it's not full, else wait 100 milliseconds to see if a space is freed
-            final boolean orangeAdded = peelQueue.offer(o,MAX_TIMEOUT_TIME_MILLIS, TimeUnit.MILLISECONDS);
-            if(!orangeAdded) {
+            final boolean orangeAdded = peelQueue.offer(o, MAX_TIMEOUT_TIME_MILLIS, TimeUnit.MILLISECONDS);
+            if (!orangeAdded) {
                 System.out.println(Thread.currentThread().getName() + " couldn't add an orange because the queue is full.");
             }
-        }catch(InterruptedException e){
+        } catch (InterruptedException e) {
             System.out.println(Thread.currentThread().getName() + " stop malfunction while attempting to add orange to queue");
         }
     }
 
     /**
      * Gets the number of oranges provided to workers.
+     *
      * @return The number of oranges provided.
      */
     public int getOrangesProvided() {
         return orangesProvided;
     }
 
-    /** Gets the number of oranges bottled, which is the size of the doneQueue (
+    /**
+     * Gets the number of oranges bottled, which is the size of the doneQueue (
      * Oranges fully processed) divided by the
      * constant {@link #ORANGES_PER_BOTTLE}.
+     *
      * @return Number of oranges bottled.
      */
-    public int getOrangesBottled(){
+    public int getOrangesBottled() {
         return doneQueue.size() / ORANGES_PER_BOTTLE;
     }
 
     /**
      * Gets the number of oranges processed, which is the length of the doneQueue.
+     *
      * @return Number of oranges processed.
      */
-    public int getOrangesProcessed(){
+    public int getOrangesProcessed() {
         return doneQueue.size();
     }
 
     /**
      * Gets the number of oranges not bottled, which is the length of the doneQueue mod {@link #ORANGES_PER_BOTTLE}.
+     *
      * @return number of oranges not bottled.
      */
     public int getOrangesNotBottled() {
@@ -313,25 +323,28 @@ public class Plant implements Runnable {
     /**
      * Gets the number of oranges wasted, which is the number of oranges not bottled and the number of oranges left in queues
      * other than the doneQueue.
+     *
      * @return The number of oranges wasted.
      */
-    public int getOrangesWasted(){
+    public int getOrangesWasted() {
         return doneQueue.size() % ORANGES_PER_BOTTLE + getOrangesLeftInQueue() + getOrangesRemovedFromQueues();
     }
 
     /**
      * Gets the number of oranges left in all queues besides the doneQueue.
+     *
      * @return The number of oranges left in queues.
      */
-    public int getOrangesLeftInQueue(){
+    public int getOrangesLeftInQueue() {
         return peelQueue.size() + squeezeQueue.size() + bottleQueue.size();
     }
 
     /**
      * Gets how many oranges were removed from queues because they were in the wrong one.
+     *
      * @return How many oranges were removed from queues because they were in the wrong one.
      */
-    public int getOrangesRemovedFromQueues(){
+    public int getOrangesRemovedFromQueues() {
         return orangesRemovedFromQueues;
     }
 }

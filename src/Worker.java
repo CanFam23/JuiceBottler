@@ -6,7 +6,7 @@ import java.util.concurrent.TimeUnit;
  * represents when to stop doing work on an {@link Orange}. The worker will get oranges to do work on from the {@link #takeQueue},
  * and then add the oranges to the {@link #giveQueue} when the worker is done doing its job on it.
  */
-public class Worker implements Runnable{
+public class Worker implements Runnable {
     /** Max amount of time a worker will wait to get/add an orange from/to a queue. */
     private static final int MAX_TIMEOUT_TIME_MILLIS = 100;
 
@@ -27,21 +27,22 @@ public class Worker implements Runnable{
 
     /**
      * Creates a new Worker object.
-     * @param plantNum Number of plant this worker is working in, used to name worker thread.
+     *
+     * @param plantNum  Number of plant this worker is working in, used to name worker thread.
      * @param threadNum Number of thread/worker.
      * @param takeQueue Queue to take oranges from.
      * @param giveQueue Queue to add oranges to after the workers job is complete
-     * @param job The worker will process an orange until it's {@link Orange.State} equals job.
+     * @param job       The worker will process an orange until it's {@link Orange.State} equals job.
      */
-    public Worker(int plantNum, int threadNum, BlockingQueue<Orange> takeQueue,BlockingQueue<Orange> giveQueue, Orange.State job){
+    public Worker(int plantNum, int threadNum, BlockingQueue<Orange> takeQueue, BlockingQueue<Orange> giveQueue, Orange.State job) {
         this.takeQueue = takeQueue;
         this.giveQueue = giveQueue;
-        this.thread = new Thread(this,"Worker[" + plantNum + "." +threadNum+"]");
+        this.thread = new Thread(this, "Worker[" + plantNum + "." + threadNum + "]");
         this.job = job;
     }
 
     /** Starts thread by setting {@link #timeToWork} to true and calling {@link Thread#start()}. */
-    public void start(){
+    public void start() {
         timeToWork = true;
         thread.start();
     }
@@ -50,7 +51,7 @@ public class Worker implements Runnable{
      * Stops thread from working by setting {@link #timeToWork} to false,
      * but doesn't stop thread from running. (To stop thread from running, call {@link #waitToStop()})
      */
-    public void stop(){
+    public void stop() {
         timeToWork = false;
     }
 
@@ -60,32 +61,33 @@ public class Worker implements Runnable{
      */
     @Override
     public void run() {
-     System.out.println(Thread.currentThread().getName()+" is working.");
-     while(timeToWork){
-         try{
-             // Attempt to get an orange from the takeQueue, waits up to 100 milliseconds if none available
-             final Orange o = takeQueue.poll(MAX_TIMEOUT_TIME_MILLIS, TimeUnit.MILLISECONDS);
-             if(o != null){
-                 processOrange(o);
+        System.out.println(Thread.currentThread().getName() + " is working.");
+        while (timeToWork) {
+            try {
+                // Attempt to get an orange from the takeQueue, waits up to 100 milliseconds if none available
+                final Orange o = takeQueue.poll(MAX_TIMEOUT_TIME_MILLIS, TimeUnit.MILLISECONDS);
+                if (o != null) {
+                    processOrange(o);
 
-                 // Attempt to give an orange to the giveQueue, waits up to 100 milliseconds if queue is full
-                 final boolean oGiven = giveQueue.offer(o,MAX_TIMEOUT_TIME_MILLIS,TimeUnit.MILLISECONDS);
-                 if(!oGiven){
-                     System.out.println(Thread.currentThread().getName()+" couldn't put an orange in it's give queue because it was full.");
-                 }
-             }
-         } catch(InterruptedException e){
-             System.out.println(Thread.currentThread().getName()+" interrupted when waiting to get orange from queue.");
-         }
-     }
-     System.out.println(Thread.currentThread().getName()+" has finished working.");
+                    // Attempt to give an orange to the giveQueue, waits up to 100 milliseconds if queue is full
+                    final boolean oGiven = giveQueue.offer(o, MAX_TIMEOUT_TIME_MILLIS, TimeUnit.MILLISECONDS);
+                    if (!oGiven) {
+                        System.out.println(Thread.currentThread().getName() + " couldn't put an orange in it's give queue because it was full.");
+                    }
+                }
+            } catch (InterruptedException e) {
+                System.out.println(Thread.currentThread().getName() + " interrupted when waiting to get orange from queue.");
+            }
+        }
+        System.out.println(Thread.currentThread().getName() + " has finished working.");
     }
 
     /**
      * Runs {@link Orange#runProcess()} on given orange until this thread has done it's {@link #job}.
+     *
      * @param o Orange to run process on.
      */
-    public void processOrange(Orange o){
+    public void processOrange(Orange o) {
         while (o.getState() != job) {
             o.runProcess();
         }

@@ -37,6 +37,7 @@ public class Orange {
 
         /**
          * Creates new state enum.
+         *
          * @param timeToComplete Time it takes to complete this state (In milliseconds).
          */
         State(int timeToComplete) {
@@ -67,6 +68,7 @@ public class Orange {
 
     /**
      * Gets the current {@link Orange.State state} of the orange
+     *
      * @return Current state of the orange.
      */
     public State getState() {
