@@ -61,7 +61,6 @@ public class Worker implements Runnable {
      */
     @Override
     public void run() {
-        System.out.println(Thread.currentThread().getName() + " is working.");
         while (timeToWork) {
             try {
                 // Attempt to get an orange from the takeQueue, waits up to 100 milliseconds if none available
@@ -72,14 +71,13 @@ public class Worker implements Runnable {
                     // Attempt to give an orange to the giveQueue, waits up to 100 milliseconds if queue is full
                     final boolean oGiven = giveQueue.offer(o, MAX_TIMEOUT_TIME_MILLIS, TimeUnit.MILLISECONDS);
                     if (!oGiven) {
-                        System.out.println(Thread.currentThread().getName() + " couldn't put an orange in it's give queue because it was full.");
+                        System.err.println(Thread.currentThread().getName() + " couldn't put an orange in it's give queue because it was full.");
                     }
                 }
             } catch (InterruptedException e) {
-                System.out.println(Thread.currentThread().getName() + " interrupted when waiting to get orange from queue.");
+                System.err.println(Thread.currentThread().getName() + " interrupted when waiting to get orange from queue.");
             }
         }
-        System.out.println(Thread.currentThread().getName() + " has finished working.");
     }
 
     /**
@@ -87,7 +85,7 @@ public class Worker implements Runnable {
      *
      * @param o Orange to run process on.
      */
-    public void processOrange(Orange o) {
+    private void processOrange(Orange o) {
         while (o.getState() != job) {
             o.runProcess();
         }

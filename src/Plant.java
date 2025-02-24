@@ -77,6 +77,8 @@ public class Plant implements Runnable {
             totalNotBottled += p.getOrangesNotBottled();
             totalRemoved += p.getOrangesRemovedFromQueues();
         }
+        System.out.println();
+        System.out.println("=".repeat(10) + "Results" + "=".repeat(10));
         System.out.println("Total provided/processed = " + totalProvided + "/" + totalProcessed);
         System.out.println("Total left in queues = " + totalLeftInQueue);
         System.out.println("Total leftover after bottling oranges = " + totalNotBottled);
@@ -215,7 +217,6 @@ public class Plant implements Runnable {
             orangesProvided++;
             checkQueues();
         }
-        System.out.println(" ");
         System.out.println(Thread.currentThread().getName() + " Done");
     }
 
@@ -228,7 +229,7 @@ public class Plant implements Runnable {
      *     <li>Removes oranges from {@link #doneQueue} who's state isn't bottled.</li>
      * </ul>
      */
-    public void checkQueues() {
+    private void checkQueues() {
         // Remove oranges from peel queue if state isn't fetched
         final int peelQueueSize = peelQueue.size();
         boolean removedFromQueue = peelQueue.removeIf(orange -> orange.getState() != Orange.State.Fetched);
@@ -267,18 +268,18 @@ public class Plant implements Runnable {
      *
      * @param o Orange to process
      */
-    public void distributeOrange(Orange o) {
+    private void distributeOrange(Orange o) {
         try {
             if (o.getState() != Orange.State.Fetched) {
-                System.err.println("Time to peel!");
+                System.err.println("Orange state wasn't fetched during distributing!");
             }
             // Add orange to queue if it's not full, else wait 100 milliseconds to see if a space is freed
             final boolean orangeAdded = peelQueue.offer(o, MAX_TIMEOUT_TIME_MILLIS, TimeUnit.MILLISECONDS);
             if (!orangeAdded) {
-                System.out.println(Thread.currentThread().getName() + " couldn't add an orange because the queue is full.");
+                System.err.println(Thread.currentThread().getName() + " couldn't add an orange because the queue is full.");
             }
         } catch (InterruptedException e) {
-            System.out.println(Thread.currentThread().getName() + " stop malfunction while attempting to add orange to queue");
+            System.err.println(Thread.currentThread().getName() + " stop malfunction while attempting to add orange to queue");
         }
     }
 
