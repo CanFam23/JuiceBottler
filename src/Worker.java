@@ -68,11 +68,8 @@ public class Worker implements Runnable {
                 if (o != null) {
                     processOrange(o);
 
-                    // Attempt to give an orange to the giveQueue, waits up to 100 milliseconds if queue is full
-                    final boolean oGiven = giveQueue.offer(o, MAX_TIMEOUT_TIME_MILLIS, TimeUnit.MILLISECONDS);
-                    if (!oGiven) {
-                        System.err.println(Thread.currentThread().getName() + " couldn't put an orange in it's give queue because it was full.");
-                    }
+                    // Put an orange in the giveQueue, waits if queue is full
+                    giveQueue.put(o);
                 }
             } catch (InterruptedException e) {
                 System.err.println(Thread.currentThread().getName() + " interrupted when waiting to get orange from queue.");

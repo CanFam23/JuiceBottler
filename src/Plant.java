@@ -1,6 +1,5 @@
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
 
 /**
  * The {@code Plant} class represents a processing plant in which workers bottle oranges. Using several threads and different queues,
@@ -31,9 +30,6 @@ public class Plant implements Runnable {
 
     /** Total number of workers working in each plant. */
     private static final int TOTAL_WORKERS = NUM_PEELERS + NUM_SQUEEZERS + NUM_BOTTLERS;
-
-    /** Max amount of time a plant will wait to add orange to a queue. */
-    private static final int MAX_TIMEOUT_TIME_MILLIS = 100;
 
     /**
      * Main method, creates plants and starts them, the gives them time to work before stopping them and gathering data.
@@ -213,8 +209,9 @@ public class Plant implements Runnable {
     public void run() {
         System.out.println(Thread.currentThread().getName() + " Processing oranges");
         while (timeToWork) {
-            distributeOrange(new Orange());
-            orangesProvided++;
+            if(distributeOrange(new Orange())){
+                orangesProvided++;
+            }
             checkQueues();
         }
         System.out.println(Thread.currentThread().getName() + " Done");
@@ -234,24 +231,24 @@ public class Plant implements Runnable {
         final int peelQueueSize = peelQueue.size();
         boolean removedFromQueue = peelQueue.removeIf(orange -> orange.getState() != Orange.State.Fetched);
         if (removedFromQueue) {
-            System.err.println("Removed " + (peelQueueSize - peelQueue.size()) + " orange(s) from peel queue with incorrect state(s).");
             orangesRemovedFromQueues += (peelQueueSize - peelQueue.size());
+            System.err.println("Removed " + (peelQueueSize - peelQueue.size()) + " orange(s) from peel queue with incorrect state(s).");
         }
 
         // Remove oranges from squeeze queue if state isn't peeled
         final int squeezeQueueSize = squeezeQueue.size();
         removedFromQueue = squeezeQueue.removeIf(orange -> orange.getState() != Orange.State.Peeled);
         if (removedFromQueue) {
-            System.err.println("Removed " + (squeezeQueueSize - squeezeQueue.size()) + " orange(s) from squeeze queue with incorrect state(s).");
             orangesRemovedFromQueues += (squeezeQueueSize - squeezeQueue.size());
+            System.err.println("Removed " + (squeezeQueueSize - squeezeQueue.size()) + " orange(s) from squeeze queue with incorrect state(s).");
         }
 
         // Remove oranges from bottle queue if state isn't squeezed
         final int bottleQueueSize = bottleQueue.size();
         removedFromQueue = bottleQueue.removeIf(orange -> orange.getState() != Orange.State.Squeezed);
         if (removedFromQueue) {
-            System.err.println("Removed " + (bottleQueueSize - bottleQueue.size()) + " orange(s) from bottle queue with incorrect state(s).");
             orangesRemovedFromQueues += (bottleQueueSize - bottleQueue.size());
+            System.err.println("Removed " + (bottleQueueSize - bottleQueue.size()) + " orange(s) from bottle queue with incorrect state(s).");
         }
 
         // Remove oranges from done queue if state isn't bottled
@@ -267,20 +264,22 @@ public class Plant implements Runnable {
      * Offers an orange to the peelQueue, if full, it will wait 100 milliseconds to add one.
      *
      * @param o Orange to process
+     * @return {@code true} if the orange was distributed to the peelQueue, {@code false} otherwise.
      */
-    private void distributeOrange(Orange o) {
-        try {
-            if (o.getState() != Orange.State.Fetched) {
-                System.err.println("Orange state wasn't fetched during distributing!");
+    private boolean distributeOrange(Orange o) {
+        // Make sure orange is in correct state (Fetched)
+        if (o.getState() != Orange.State.Fetched) {
+            System.err.println("Orange state supposed to be fetched, got '" + o.getState() + "' during distributing! Not adding to peelQueue.");
+        } else {
+            try {
+                // Add orange to queue. If full, it will wait until space becomes available.
+                peelQueue.put(o);
+                return true;
+            } catch (InterruptedException e) {
+                System.err.println(Thread.currentThread().getName() + " stop malfunction while attempting to add orange to queue");
             }
-            // Add orange to queue if it's not full, else wait 100 milliseconds to see if a space is freed
-            final boolean orangeAdded = peelQueue.offer(o, MAX_TIMEOUT_TIME_MILLIS, TimeUnit.MILLISECONDS);
-            if (!orangeAdded) {
-                System.err.println(Thread.currentThread().getName() + " couldn't add an orange because the queue is full.");
-            }
-        } catch (InterruptedException e) {
-            System.err.println(Thread.currentThread().getName() + " stop malfunction while attempting to add orange to queue");
         }
+        return false;
     }
 
     /**
